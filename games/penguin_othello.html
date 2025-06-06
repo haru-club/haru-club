@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ぺんぎんくんとオセロ🎀</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kiwi+Maru&display=swap');
+
+    body {
+      font-family: 'Kiwi Maru', sans-serif;
+      text-align: center;
+      background: #fdfaff;
+      color: #555;
+    }
+
+    #startScreen, #gameScreen {
+      margin-top: 30px;
+    }
+
+    #gameArea {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    #game {
+      display: grid;
+      grid-template-columns: repeat(8, 40px);
+      grid-template-rows: repeat(8, 40px);
+      gap: 4px;
+    }
+
+    .cell {
+      width: 40px;
+      height: 40px;
+      background-color: #d6f2e9;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .stone {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .white { background: white; }
+    .blue { background: #add8e6; }
+
+    #penguinBox {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 200px;
+    }
+
+    #penguinImg {
+      width: 120px;
+      height: auto;
+    }
+
+    #speechBubble {
+      position: relative;
+      background: #ffffff;
+      border: 2px solid #add8e6;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.4;
+      box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+      width: 160px;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    #speechBubble::after {
+      content: '';
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent;
+      border-bottom-color: #ffffff;
+    }
+
+    .cute-btn {
+      background: #ffb6c1;
+      border: none;
+      border-radius: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px #e89ca9;
+      transition: all 0.2s;
+    }
+
+    .cute-btn:hover {
+      background: #ffa4b5;
+      transform: translateY(-2px);
+    }
+
+    .fade-text {
+      opacity: 0;
+      transition: opacity 1.2s ease-in-out;
+      font-size: 20px;
+      margin-top: 20px;
+    }
+
+    .fade-text.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <h2>ぺんぎんくんとオセロ🎀</h2>
+    <p>あなたは しろ です。</p>
+    <p>ぺんぎんくんは みずいろ です。</p>
+    <button class="cute-btn" onclick="startGame()">ぺんぎんくんと対戦！</button>
+  </div>
+
+  <div id="gameScreen" style="display:none;">
+    <div id="gameArea">
+      <div id="game"></div>
+      <div id="penguinBox">
+        <img 
+          src="https://lh3.googleusercontent.com/d/1xdBwWYlN2kauBvbqzZU2ZKAbhMEsl3nQ" 
+          alt="ぺんぎんくん" 
+          id="penguinImg">
+        <div id="speechBubble">
+          <p id="penguinLine">ぺんぎんくんのセリフがここに！</p>
+        </div>
+      </div>
+    </div>
+
+    <p id="turn">あなたの番です</p>
+    <p id="playerInfo">あなたは しろ です。</p>
+    <p id="result" class="fade-text"></p>
+    <button class="cute-btn" onclick="restart()">もう一回！</button>
+  </div>
+
+  <script>
+    const game = document.getElementById('game');
+    const turnDisplay = document.getElementById('turn');
+    const resultDisplay = document.getElementById('result');
+    const penguinLine = document.getElementById('penguinLine');
+    let board = [];
+    let currentTurn = 'white';
+
+    const directions = [
+      [-1,0],[1,0],[0,-1],[0,1],
+      [-1,-1],[-1,1],[1,-1],[1,1]
+    ];
+
+    const penguinQuotes = [
+      "ふーん、そこ打つんだ。",
+      "オレの番か…いくよ。",
+      "読めてるよ、その手。",
+      "角？それ、オレのね。",
+      "そっち来ると思った。",
+      "まだ本気出してないけどね。",
+      "…次で決めるよ。",
+      "逃げ場、ないよ？",
+      "その手、見えてた。"
+    ];
+
+    function startGame() {
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('gameScreen').style.display = 'block';
+      restart();
+    }
+
+    function createBoard() {
+      board = Array.from({ length: 8 }, () => Array(8).fill(''));
+      board[3][3] = 'blue';
+      board[4][4] = 'blue';
+      board[3][4] = 'white';
+      board[4][3] = 'white';
+      penguinLine.textContent = '';
+      render();
+    }
+
+    function render() {
+      game.innerHTML = '';
+      let hasMoves = false;
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = i;
+          cell.dataset.col = j;
+          if (board[i][j]) {
+            const stone = document.createElement('div');
+            stone.className = 'stone ' + board[i][j];
+            cell.appendChild(stone);
+          } else if (currentTurn === 'white' && canFlip(i, j, 'white').length) {
+            cell.style.outline = '2px dashed #fff';
+            cell.addEventListener('click', () => handleMove(i, j));
+            hasMoves = true;
+          }
+          game.appendChild(cell);
+        }
+      }
+
+      if (!hasMoves && currentTurn === 'white') {
+        currentTurn = 'blue';
+        setTimeout(cpuMove, 800);
+      }
+
+      turnDisplay.textContent = currentTurn === 'white' ? 'あなたの番です' : 'ぺんぎんくんの番です…';
+    }
+
+    function handleMove(i, j) {
+      const flips = canFlip(i, j, currentTurn);
+      if (!flips.length) return;
+      board[i][j] = currentTurn;
+      flips.forEach(([r, c]) => board[r][c] = currentTurn);
+      currentTurn = currentTurn === 'white' ? 'blue' : 'white';
+      render();
+      if (currentTurn === 'blue') {
+        turnDisplay.textContent = 'ぺんぎんくんが考え中...';
+        setTimeout(cpuMove, 1200);
+      }
+    }
+
+    function cpuMove() {
+      const moves = [];
+
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          const flips = canFlip(i, j, 'blue');
+          if (!board[i][j] && flips.length) {
+            const isCorner = (i === 0 || i === 7) && (j === 0 || j === 7);
+            const isDanger = (i === 1 || i === 6) && (j === 1 || j === 6);
+            moves.push({ i, j, flips, isCorner, isDanger });
+          }
+        }
+      }
+
+      if (moves.length) {
+        moves.sort((a, b) => {
+          if (a.isCorner && !b.isCorner) return -1;
+          if (!a.isCorner && b.isCorner) return 1;
+          if (!a.isDanger && b.isDanger) return -1;
+          if (a.isDanger && !b.isDanger) return 1;
+          return b.flips.length - a.flips.length;
+        });
+
+        const { i, j } = moves[0];
+        penguinLine.textContent = randomQuote();
+        handleMove(i, j);
+      } else {
+        currentTurn = 'white';
+        render();
+      }
+
+      checkGameOver();
+    }
+
+    function canFlip(row, col, color) {
+      if (board[row][col]) return [];
+      const opponent = color === 'white' ? 'blue' : 'white';
+      const flips = [];
+      for (let [dx, dy] of directions) {
+        let r = row + dx, c = col + dy, temp = [];
+        while (r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === opponent) {
+          temp.push([r, c]);
+          r += dx;
+          c += dy;
+        }
+        if (r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === color && temp.length) {
+          flips.push(...temp);
+        }
+      }
+      return flips;
+    }
+
+    function randomQuote() {
+      return penguinQuotes[Math.floor(Math.random() * penguinQuotes.length)];
+    }
+
+    function checkGameOver() {
+      const allFilled = board.every(row => row.every(cell => cell));
+      const playerMoves = board.flat().filter(c => c === 'white').length;
+      const cpuMoves = board.flat().filter(c => c === 'blue').length;
+
+      if (allFilled || (!hasValidMove('white') && !hasValidMove('blue'))) {
+        resultDisplay.classList.add("show");
+        if (playerMoves > cpuMoves) {
+          resultDisplay.textContent = `🎉 やったー！勝った！ ${playerMoves} - ${cpuMoves}`;
+        } else if (playerMoves < cpuMoves) {
+          resultDisplay.textContent = `💦 負けちゃった… ${playerMoves} - ${cpuMoves}`;
+        } else {
+          resultDisplay.textContent = `🤝 引き分け！ ${playerMoves} - ${cpuMoves}`;
+        }
+      }
+    }
+
+    function hasValidMove(color) {
+      for (let i = 0; i < 8; i++)
+        for (let j = 0; j < 8; j++)
+          if (canFlip(i, j, color).length) return true;
+      return false;
+    }
+
+    function restart() {
+      resultDisplay.textContent = '';
+      resultDisplay.classList.remove("show");
+      penguinLine.textContent = '';
+      currentTurn = 'white';
+      createBoard();
+    }
+  </script>
+</body>
+</html>
