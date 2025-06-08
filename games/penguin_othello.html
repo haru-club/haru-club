@@ -14,10 +14,23 @@
       color: #555;
     }
 
-    #startScreen, #gameScreen {
-      margin-top: 30px;
-    }
+    #startScreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
 
+    #gameScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+}
     #gameArea {
       display: flex;
       justify-content: center;
