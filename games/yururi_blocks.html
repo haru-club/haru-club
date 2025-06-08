@@ -14,28 +14,28 @@
       text-align: center;
     }
 
-    .nav-btn {
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: bold;
-      color: #ffffff;
-      background-color: #60c5d1;
-      padding: 8px 16px;
-      border-radius: 20px;
-      transition: background-color 0.3s ease;
-      box-shadow: 0 3px 0 #4aa6b1;
-      margin: 15px;
-      display: incline-block;
-    }
-
-    .nav-btn:hover {
-      background-color: #4aa6b1;
-    }
-
     h1 {
       color: #ff91a4;
       margin-top: 20px;
       font-size: 32px;
+    }
+
+    /* 🏠 Home ボタンスタイル */
+    .home-btn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: #ffb6c1;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 16px;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px #e89ca9;
+      z-index: 100;
+      text-decoration: none;
+      font-family: 'Kiwi Maru', serif;
     }
 
     #startScreen, #gameOver {
@@ -104,9 +104,8 @@
 </head>
 <body>
 
-  <nav id="navBar">
-    <a href="../index.html" class="nav-btn">Home</a>
-  </nav>
+  <!-- 🏠 Home ボタン -->
+  <a href="../index.html" class="home-btn">  Home  </a>
 
   <div id="startScreen">
     <h1>ゆるりブロック</h1>
