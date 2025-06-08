@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ゆるりブロック</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kiwi+Maru&display=swap');
+
+    body {
+      margin: 0;
+      font-family: 'Kiwi Maru', serif;
+      background: #fffafc;
+      text-align: center;
+    }
+
+    h1 {
+      color: #ff91a4;
+      margin-top: 20px;
+      font-size: 32px;
+    }
+
+    #startScreen, #gameOver {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #fffafc;
+      position: absolute;
+      top: 0;
+      width: 100%;
+      z-index: 10;
+    }
+
+    .cute-btn {
+      background: #ffb6c1;
+      border: none;
+      border-radius: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px #e89ca9;
+      margin-top: 20px;
+    }
+
+    #gameCanvas {
+      background: #e0f7fa;
+      display: block;
+      margin: 60px auto 20px;
+      border: 6px solid #ffc1e3;
+    }
+
+    #controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .ctrl-btn {
+      width: 60px;
+      height: 60px;
+      font-size: 24px;
+      border-radius: 50%;
+      border: none;
+      background: #add8e6;
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    #gameOver {
+      background: rgba(255,250,252,0.95);
+      font-size: 24px;
+      color: #ff6f91;
+      animation: fadeIn 1s ease forwards;
+      display: none;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+  </style>
+</head>
+<body>
+  <div id="startScreen">
+    <h1>ゆるりブロック</h1>
+    <button class="cute-btn" onclick="startGame()">スタート！</button>
+  </div>
+
+  <canvas id="gameCanvas" width="240" height="400"></canvas>
+
+  <div id="controls">
+    <button class="ctrl-btn" onclick="moveLeft()">←</button>
+    <button class="ctrl-btn" onclick="rotate()">⟳</button>
+    <button class="ctrl-btn" onclick="moveRight()">→</button>
+    <button class="ctrl-btn" onclick="moveDown()">↓</button>
+  </div>
+
+  <div id="gameOver">
+    <p>🌸おしまい！🌸</p>
+    <button class="cute-btn" onclick="restartGame()">もう一回！</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const blockSize = 20;
+    const rows = 20;
+    const cols = 12;
+    const colors = ["#ffc1e3", "#b2ebf2", "#dcedc8", "#f8bbd0", "#ffe082", "#b39ddb", "#80deea"];
+
+    const shapes = [
+      [[1,1,1,1]],
+      [[1,1],[1,1]],
+      [[0,1,0],[1,1,1]],
+      [[1,1,0],[0,1,1]],
+      [[0,1,1],[1,1,0]],
+      [[1,0,0],[1,1,1]],
+      [[0,0,1],[1,1,1]]
+    ];
+
+    let board, currentShape, currentX, currentY, gameInterval, currentColor;
+
+    function resetBoard() {
+      board = Array.from({length: rows}, () => Array(cols).fill(""));
+    }
+
+    function drawBlock(x, y, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x * blockSize, y * blockSize, blockSize, blockSize);
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(x * blockSize, y * blockSize, blockSize, blockSize);
+    }
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (board[y][x]) drawBlock(x, y, board[y][x]);
+        }
+      }
+
+      if (currentShape) {
+        for (let y = 0; y < currentShape.length; y++) {
+          for (let x = 0; x < currentShape[y].length; x++) {
+            if (currentShape[y][x]) drawBlock(currentX + x, currentY + y, currentColor);
+          }
+        }
+      }
+    }
+
+    function spawnBlock() {
+      currentShape = shapes[Math.floor(Math.random() * shapes.length)];
+      currentColor = colors[Math.floor(Math.random() * colors.length)];
+      currentX = Math.floor(cols / 2 - currentShape[0].length / 2);
+      currentY = 0;
+      if (!canMove(0, 0)) endGame();
+    }
+
+    function canMove(dx, dy, shape = currentShape) {
+      for (let y = 0; y < shape.length; y++) {
+        for (let x = 0; x < shape[y].length; x++) {
+          if (shape[y][x]) {
+            let newX = currentX + x + dx;
+            let newY = currentY + y + dy;
+            if (newX < 0 || newX >= cols || newY >= rows || (newY >= 0 && board[newY][newX])) return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    function fixBlock() {
+      for (let y = 0; y < currentShape.length; y++) {
+        for (let x = 0; x < currentShape[y].length; x++) {
+          if (currentShape[y][x]) {
+            board[currentY + y][currentX + x] = currentColor;
+          }
+        }
+      }
+    }
+
+    function clearLines() {
+      for (let y = rows - 1; y >= 0; y--) {
+        if (board[y].every(cell => cell)) {
+          board.splice(y, 1);
+          board.unshift(Array(cols).fill(""));
+          y++;
+        }
+      }
+    }
+
+    function moveDown() {
+      if (canMove(0, 1)) {
+        currentY++;
+      } else {
+        fixBlock();
+        clearLines();
+        spawnBlock();
+      }
+      drawBoard();
+    }
+
+    function moveLeft() {
+      if (canMove(-1, 0)) currentX--;
+      drawBoard();
+    }
+
+    function moveRight() {
+      if (canMove(1, 0)) currentX++;
+      drawBoard();
+    }
+
+    function rotate() {
+      const rotated = currentShape[0].map((_, i) => currentShape.map(row => row[i]).reverse());
+      if (canMove(0, 0, rotated)) currentShape = rotated;
+      drawBoard();
+    }
+
+    function gameLoop() {
+      moveDown();
+    }
+
+    function startGame() {
+      document.getElementById("startScreen").style.display = "none";
+      resetBoard();
+      spawnBlock();
+      drawBoard();
+      gameInterval = setInterval(gameLoop, 500);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      document.getElementById("gameOver").style.display = "flex";
+    }
+
+    function restartGame() {
+      document.getElementById("gameOver").style.display = "none";
+      startGame();
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") moveLeft();
+      if (e.key === "ArrowRight") moveRight();
+      if (e.key === "ArrowDown") moveDown();
+      if (e.key === "ArrowUp") rotate();
+    });
+  </script>
+</body>
+</html>
